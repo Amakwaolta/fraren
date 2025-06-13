@@ -4,7 +4,182 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>フラーレン 3D ビューワー</title>
-    <link rel="stylesheet" href="styles.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            touch-action: manipulation;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .fullerene-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            touch-action: manipulation;
+        }
+
+        .fullerene-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .fullerene-btn.active {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            border-color: rgba(255, 255, 255, 0.9);
+        }
+
+        #canvas-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            margin-bottom: 30px;
+        }
+
+        #three-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            touch-action: none;
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .info-panel h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .info-panel p {
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .info-panel ul {
+            list-style: none;
+            color: #666;
+        }
+
+        .info-panel li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .info-panel li:before {
+            content: "•";
+            color: #667eea;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+
+        /* レスポンシブ対応 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            header h1 {
+                font-size: 2em;
+            }
+            
+            .controls {
+                gap: 10px;
+            }
+            
+            .fullerene-btn {
+                padding: 10px 18px;
+                font-size: 0.9em;
+            }
+            
+            #canvas-container {
+                height: 400px;
+            }
+            
+            .info-panel {
+                padding: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            header h1 {
+                font-size: 1.8em;
+            }
+            
+            .fullerene-btn {
+                padding: 8px 16px;
+                font-size: 0.8em;
+            }
+            
+            #canvas-container {
+                height: 350px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -37,6 +212,415 @@
     </div>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="script.js"></script>
+    <script>
+        // Three.jsが読み込まれるまで待機
+        window.addEventListener('load', function() {
+            if (typeof THREE !== 'undefined') {
+                console.log('Three.js loaded successfully');
+                initApp();
+            } else {
+                console.error('Three.js failed to load');
+            }
+        });
+        
+        function initApp() {
+            class FullereneViewer {
+                constructor() {
+                    this.scene = null;
+                    this.camera = null;
+                    this.renderer = null;
+                    this.currentMolecule = null;
+                    this.isRotating = false;
+                    this.mouseX = 0;
+                    this.mouseY = 0;
+                    
+                    this.init();
+                    this.setupEventListeners();
+                    this.animate();
+                    this.loadMolecule('C60');
+                }
+                
+                init() {
+                    const container = document.getElementById('canvas-container');
+                    const canvas = document.getElementById('three-canvas');
+                    
+                    // シーンの作成
+                    this.scene = new THREE.Scene();
+                    this.scene.background = new THREE.Color(0x111122);
+                    
+                    // カメラの作成
+                    this.camera = new THREE.PerspectiveCamera(
+                        75, 
+                        container.clientWidth / container.clientHeight, 
+                        0.1, 
+                        1000
+                    );
+                    this.camera.position.set(0, 0, 10);
+                    
+                    // レンダラーの作成
+                    this.renderer = new THREE.WebGLRenderer({ 
+                        canvas: canvas, 
+                        antialias: true
+                    });
+                    this.renderer.setSize(container.clientWidth, container.clientHeight);
+                    this.renderer.setPixelRatio(window.devicePixelRatio);
+                    
+                    // ライティング
+                    const ambientLight = new THREE.AmbientLight(0x404040, 0.8);
+                    this.scene.add(ambientLight);
+                    
+                    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+                    directionalLight.position.set(10, 10, 5);
+                    this.scene.add(directionalLight);
+                    
+                    const pointLight = new THREE.PointLight(0x4499ff, 0.6);
+                    pointLight.position.set(-10, -10, -5);
+                    this.scene.add(pointLight);
+                    
+                    // リサイズ対応
+                    window.addEventListener('resize', () => this.onWindowResize());
+                    
+                    console.log('Three.js scene initialized');
+                }
+                
+                setupEventListeners() {
+                    const canvas = document.getElementById('three-canvas');
+                    
+                    // マウスイベント
+                    canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
+                    canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
+                    canvas.addEventListener('mouseup', () => this.onMouseUp());
+                    canvas.addEventListener('wheel', (e) => this.onWheel(e));
+                    
+                    // タッチイベント
+                    canvas.addEventListener('touchstart', (e) => this.onTouchStart(e));
+                    canvas.addEventListener('touchmove', (e) => this.onTouchMove(e));
+                    canvas.addEventListener('touchend', () => this.onTouchEnd());
+                    
+                    // ボタンイベント
+                    document.getElementById('c60-btn').addEventListener('click', () => {
+                        console.log('C60 button clicked');
+                        this.switchMolecule('C60');
+                    });
+                    document.getElementById('c70-btn').addEventListener('click', () => {
+                        console.log('C70 button clicked');
+                        this.switchMolecule('C70');
+                    });
+                    document.getElementById('c84-btn').addEventListener('click', () => {
+                        console.log('C84 button clicked');
+                        this.switchMolecule('C84');
+                    });
+                }
+                
+                onMouseDown(event) {
+                    this.isRotating = true;
+                    this.mouseX = event.clientX;
+                    this.mouseY = event.clientY;
+                }
+                
+                onMouseMove(event) {
+                    if (!this.isRotating || !this.currentMolecule) return;
+                    
+                    const deltaX = event.clientX - this.mouseX;
+                    const deltaY = event.clientY - this.mouseY;
+                    
+                    this.currentMolecule.rotation.y += deltaX * 0.01;
+                    this.currentMolecule.rotation.x += deltaY * 0.01;
+                    
+                    this.mouseX = event.clientX;
+                    this.mouseY = event.clientY;
+                }
+                
+                onMouseUp() {
+                    this.isRotating = false;
+                }
+                
+                onTouchStart(event) {
+                    event.preventDefault();
+                    if (event.touches.length === 1) {
+                        this.isRotating = true;
+                        this.mouseX = event.touches[0].clientX;
+                        this.mouseY = event.touches[0].clientY;
+                    }
+                }
+                
+                onTouchMove(event) {
+                    event.preventDefault();
+                    if (!this.isRotating || !this.currentMolecule || event.touches.length !== 1) return;
+                    
+                    const deltaX = event.touches[0].clientX - this.mouseX;
+                    const deltaY = event.touches[0].clientY - this.mouseY;
+                    
+                    this.currentMolecule.rotation.y += deltaX * 0.01;
+                    this.currentMolecule.rotation.x += deltaY * 0.01;
+                    
+                    this.mouseX = event.touches[0].clientX;
+                    this.mouseY = event.touches[0].clientY;
+                }
+                
+                onTouchEnd() {
+                    this.isRotating = false;
+                }
+                
+                onWheel(event) {
+                    event.preventDefault();
+                    const delta = event.deltaY * 0.01;
+                    this.camera.position.z += delta;
+                    this.camera.position.z = Math.max(3, Math.min(20, this.camera.position.z));
+                }
+                
+                createC60() {
+                    const group = new THREE.Group();
+                    
+                    // C60の頂点座標（サッカーボール型）
+                    const vertices = [];
+                    const scale = 2;
+                    
+                    // 正二十面体の頂点を基にした60頂点の近似
+                    for (let i = 0; i < 60; i++) {
+                        const theta = (i / 60) * Math.PI * 4;
+                        const phi_angle = Math.acos(1 - 2 * ((i % 20) + 0.5) / 20);
+                        const x = Math.sin(phi_angle) * Math.cos(theta) * scale;
+                        const y = Math.sin(phi_angle) * Math.sin(theta) * scale;
+                        const z = Math.cos(phi_angle) * scale;
+                        vertices.push(new THREE.Vector3(x, y, z));
+                    }
+                    
+                    // 炭素原子の作成
+                    const atomGeometry = new THREE.SphereGeometry(0.12, 16, 16);
+                    const atomMaterial = new THREE.MeshPhongMaterial({ 
+                        color: 0x333333,
+                        shininess: 100,
+                        specular: 0x222222
+                    });
+                    
+                    vertices.forEach(vertex => {
+                        const atom = new THREE.Mesh(atomGeometry, atomMaterial);
+                        atom.position.copy(vertex);
+                        group.add(atom);
+                    });
+                    
+                    // 結合の作成
+                    const bondMaterial = new THREE.MeshPhongMaterial({ 
+                        color: 0x888888,
+                        shininess: 50
+                    });
+                    
+                    for (let i = 0; i < vertices.length; i++) {
+                        for (let j = i + 1; j < vertices.length; j++) {
+                            const distance = vertices[i].distanceTo(vertices[j]);
+                            if (distance < 1.8) {
+                                const bondGeometry = new THREE.CylinderGeometry(0.04, 0.04, distance, 8);
+                                const bond = new THREE.Mesh(bondGeometry, bondMaterial);
+                                
+                                const midpoint = new THREE.Vector3().addVectors(vertices[i], vertices[j]).multiplyScalar(0.5);
+                                bond.position.copy(midpoint);
+                                
+                                const direction = new THREE.Vector3().subVectors(vertices[j], vertices[i]);
+                                bond.lookAt(vertices[j]);
+                                bond.rotateX(Math.PI / 2);
+                                
+                                group.add(bond);
+                            }
+                        }
+                    }
+                    
+                    console.log('C60 created with', group.children.length, 'objects');
+                    return group;
+                }
+                
+                createC70() {
+                    const group = new THREE.Group();
+                    
+                    // C70は楕円体状
+                    const vertices = [];
+                    const scale = 2;
+                    
+                    for (let i = 0; i < 70; i++) {
+                        const theta = (i / 70) * Math.PI * 5;
+                        const phi = Math.acos(1 - 2 * ((i % 14) + 0.5) / 14);
+                        const x = Math.sin(phi) * Math.cos(theta) * scale;
+                        const y = Math.sin(phi) * Math.sin(theta) * scale * 1.4; // 楕円形
+                        const z = Math.cos(phi) * scale;
+                        vertices.push(new THREE.Vector3(x, y, z));
+                    }
+                    
+                    // 炭素原子
+                    const atomGeometry = new THREE.SphereGeometry(0.11, 16, 16);
+                    const atomMaterial = new THREE.MeshPhongMaterial({ 
+                        color: 0x444444,
+                        shininess: 100,
+                        specular: 0x222222
+                    });
+                    
+                    vertices.forEach(vertex => {
+                        const atom = new THREE.Mesh(atomGeometry, atomMaterial);
+                        atom.position.copy(vertex);
+                        group.add(atom);
+                    });
+                    
+                    // 結合
+                    const bondMaterial = new THREE.MeshPhongMaterial({ 
+                        color: 0x888888,
+                        shininess: 50
+                    });
+                    
+                    for (let i = 0; i < vertices.length; i++) {
+                        for (let j = i + 1; j < vertices.length; j++) {
+                            const distance = vertices[i].distanceTo(vertices[j]);
+                            if (distance < 1.6) {
+                                const bondGeometry = new THREE.CylinderGeometry(0.035, 0.035, distance, 8);
+                                const bond = new THREE.Mesh(bondGeometry, bondMaterial);
+                                
+                                const midpoint = new THREE.Vector3().addVectors(vertices[i], vertices[j]).multiplyScalar(0.5);
+                                bond.position.copy(midpoint);
+                                bond.lookAt(vertices[j]);
+                                bond.rotateX(Math.PI / 2);
+                                
+                                group.add(bond);
+                            }
+                        }
+                    }
+                    
+                    console.log('C70 created with', group.children.length, 'objects');
+                    return group;
+                }
+                
+                createC84() {
+                    const group = new THREE.Group();
+                    
+                    // C84はより大きな球
+                    const vertices = [];
+                    const scale = 2.5;
+                    
+                    for (let i = 0; i < 84; i++) {
+                        const theta = (i / 84) * Math.PI * 6;
+                        const phi = Math.acos(1 - 2 * ((i % 21) + 0.5) / 21);
+                        const x = Math.sin(phi) * Math.cos(theta) * scale;
+                        const y = Math.sin(phi) * Math.sin(theta) * scale;
+                        const z = Math.cos(phi) * scale;
+                        vertices.push(new THREE.Vector3(x, y, z));
+                    }
+                    
+                    // 炭素原子
+                    const atomGeometry = new THREE.SphereGeometry(0.10, 16, 16);
+                    const atomMaterial = new THREE.MeshPhongMaterial({ 
+                        color: 0x555555,
+                        shininess: 100,
+                        specular: 0x222222
+                    });
+                    
+                    vertices.forEach(vertex => {
+                        const atom = new THREE.Mesh(atomGeometry, atomMaterial);
+                        atom.position.copy(vertex);
+                        group.add(atom);
+                    });
+                    
+                    // 結合
+                    const bondMaterial = new THREE.MeshPhongMaterial({ 
+                        color: 0x888888,
+                        shininess: 50
+                    });
+                    
+                    for (let i = 0; i < vertices.length; i++) {
+                        for (let j = i + 1; j < vertices.length; j++) {
+                            const distance = vertices[i].distanceTo(vertices[j]);
+                            if (distance < 1.4) {
+                                const bondGeometry = new THREE.CylinderGeometry(0.03, 0.03, distance, 8);
+                                const bond = new THREE.Mesh(bondGeometry, bondMaterial);
+                                
+                                const midpoint = new THREE.Vector3().addVectors(vertices[i], vertices[j]).multiplyScalar(0.5);
+                                bond.position.copy(midpoint);
+                                bond.lookAt(vertices[j]);
+                                bond.rotateX(Math.PI / 2);
+                                
+                                group.add(bond);
+                            }
+                        }
+                    }
+                    
+                    console.log('C84 created with', group.children.length, 'objects');
+                    return group;
+                }
+                
+                loadMolecule(type) {
+                    console.log('Loading molecule:', type);
+                    
+                    if (this.currentMolecule) {
+                        this.scene.remove(this.currentMolecule);
+                    }
+                    
+                    switch (type) {
+                        case 'C60':
+                            this.currentMolecule = this.createC60();
+                            this.updateInfo('C60', 'C60 - バックミンスターフラーレン', 
+                                '60個の炭素原子からなる球状分子。サッカーボールのような構造を持ちます。',
+                                ['分子式: C₆₀', '対称性: Ih', '発見年: 1985年']);
+                            break;
+                        case 'C70':
+                            this.currentMolecule = this.createC70();
+                            this.updateInfo('C70', 'C70 - ラグビーボール型フラーレン',
+                                '70個の炭素原子からなる楕円体状分子。ラグビーボールのような形状です。',
+                                ['分子式: C₇₀', '対称性: D5h', '発見年: 1985年']);
+                            break;
+                        case 'C84':
+                            this.currentMolecule = this.createC84();
+                            this.updateInfo('C84', 'C84 - 高次フラーレン',
+                                '84個の炭素原子からなる大型球状分子。より複雑な対称性を持ちます。',
+                                ['分子式: C₈₄', '対称性: D2', '同素体: 24種類']);
+                            break;
+                    }
+                    
+                    if (this.currentMolecule) {
+                        this.scene.add(this.currentMolecule);
+                        console.log('Molecule added to scene');
+                    }
+                }
+                
+                updateInfo(type, title, description, details) {
+                    const infoPanel = document.getElementById('molecule-info');
+                    infoPanel.innerHTML = `
+                        <h3>${title}</h3>
+                        <p>${description}</p>
+                        <ul>
+                            ${details.map(detail => `<li>${detail}</li>`).join('')}
+                        </ul>
+                    `;
+                }
+                
+                switchMolecule(type) {
+                    // ボタンの状態更新
+                    document.querySelectorAll('.fullerene-btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    document.getElementById(type.toLowerCase() + '-btn').classList.add('active');
+                    
+                    // 分子の切り替え
+                    this.loadMolecule(type);
+                }
+                
+                onWindowResize() {
+                    const container = document.getElementById('canvas-container');
+                    this.camera.aspect = container.clientWidth / container.clientHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(container.clientWidth, container.clientHeight);
+                }
+                
+                animate() {
+                    requestAnimationFrame(() => this.animate());
+                    
+                    // 自動回転（ユーザーが操作していない時）
+                    if (!this.isRotating && this.currentMolecule) {
+                        this.currentMolecule.rotation.y += 0.005;
+                    }
+                    
+                    this.renderer.render(this.scene, this.camera);
+                }
+            }
+            
+            // アプリケーションの初期化
+            new FullereneViewer();
+        }
+    </script>
 </body>
 </html>
