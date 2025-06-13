@@ -1,41 +1,62 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-<meta charset="UTF-8">
-<title>Three.js OrbitControls</title>
-<style>
-body { margin: 0; overflow: hidden; }
-canvas { display: block; }
-</style>
-
-<!-- 必須ライブラリを読み込む -->
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>フラーレン同素体 3Dビューア</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<script>
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
-
-// ✅ 修正ポイント：THREE.OrbitControls にする
-const controls = new THREE.OrbitControls(camera, renderer.domElement);
-
-const geometry = new THREE.BoxGeometry();
-const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-const cube = new THREE.Mesh(geometry, material);
-scene.add(cube);
-
-camera.position.z = 5;
-
-function animate() {
-requestAnimationFrame(animate);
-controls.update();
-renderer.render(scene, camera);
-}
-animate();
-</script>
+    <div class="container">
+        <header>
+            <h1>フラーレン同素体 3Dビューア</h1>
+            <p>異なるフラーレン分子の3D構造を観察できます</p>
+        </header>
+        
+        <div class="controls">
+            <div class="molecule-selector">
+                <button id="c60-btn" class="molecule-btn active" data-molecule="c60">
+                    C₆₀ (バッキーボール)
+                </button>
+                <button id="c70-btn" class="molecule-btn" data-molecule="c70">
+                    C₇₀
+                </button>
+                <button id="c84-btn" class="molecule-btn" data-molecule="c84">
+                    C₈₄
+                </button>
+            </div>
+            
+            <div class="view-controls">
+                <button id="reset-view">視点リセット</button>
+                <button id="toggle-wireframe">ワイヤーフレーム</button>
+                <button id="toggle-animation">回転ON/OFF</button>
+            </div>
+        </div>
+        
+        <div class="viewer-container">
+            <canvas id="three-canvas"></canvas>
+            <div class="info-panel">
+                <div id="molecule-info">
+                    <h3>C₆₀ (バッキーボール)</h3>
+                    <ul>
+                        <li>炭素原子: 60個</li>
+                        <li>五員環: 12個</li>
+                        <li>六員環: 20個</li>
+                        <li>直径: 約1.1nm</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3>操作方法</h3>
+            <p>• マウスドラッグ: 回転</p>
+            <p>• マウスホイール: ズーム</p>
+            <p>• 右クリックドラッグ: パン</p>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
