@@ -3,56 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>フラーレン同素体 3Dビューア</title>
-    <link rel="stylesheet" href="style.css">
+    <title>フラーレン 3D ビューワー</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>フラーレン同素体 3Dビューア</h1>
-            <p>異なるフラーレン分子の3D構造を観察できます</p>
+            <h1>フラーレン 3D ビューワー</h1>
+            <p>タッチやマウスで自由に回転・ズームできます</p>
         </header>
         
         <div class="controls">
-            <div class="molecule-selector">
-                <button id="c60-btn" class="molecule-btn active" data-molecule="c60">
-                    C₆₀ (バッキーボール)
-                </button>
-                <button id="c70-btn" class="molecule-btn" data-molecule="c70">
-                    C₇₀
-                </button>
-                <button id="c84-btn" class="molecule-btn" data-molecule="c84">
-                    C₈₄
-                </button>
-            </div>
-            
-            <div class="view-controls">
-                <button id="reset-view">視点リセット</button>
-                <button id="toggle-wireframe">ワイヤーフレーム</button>
-                <button id="toggle-animation">回転ON/OFF</button>
-            </div>
+            <button id="c60-btn" class="fullerene-btn active">C60 (バックミンスターフラーレン)</button>
+            <button id="c70-btn" class="fullerene-btn">C70</button>
+            <button id="c84-btn" class="fullerene-btn">C84</button>
         </div>
         
-        <div class="viewer-container">
+        <div id="canvas-container">
             <canvas id="three-canvas"></canvas>
-            <div class="info-panel">
-                <div id="molecule-info">
-                    <h3>C₆₀ (バッキーボール)</h3>
-                    <ul>
-                        <li>炭素原子: 60個</li>
-                        <li>五員環: 12個</li>
-                        <li>六員環: 20個</li>
-                        <li>直径: 約1.1nm</li>
-                    </ul>
-                </div>
-            </div>
         </div>
         
-        <div class="instructions">
-            <h3>操作方法</h3>
-            <p>• マウスドラッグ: 回転</p>
-            <p>• マウスホイール: ズーム</p>
-            <p>• 右クリックドラッグ: パン</p>
+        <div class="info-panel">
+            <div id="molecule-info">
+                <h3>C60 - バックミンスターフラーレン</h3>
+                <p>60個の炭素原子からなる球状分子。サッカーボールのような構造を持ちます。</p>
+                <ul>
+                    <li>分子式: C₆₀</li>
+                    <li>対称性: Ih</li>
+                    <li>発見年: 1985年</li>
+                </ul>
+            </div>
         </div>
     </div>
     
